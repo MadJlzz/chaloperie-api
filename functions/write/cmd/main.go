@@ -19,6 +19,7 @@ func main() {
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		port = envPort
 	}
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "../../credentials/chaloperie-writer.json")
 	if err := funcframework.Start(port); err != nil {
 		log.Fatalf("funcframework.Start: %v\n", err)
 	}

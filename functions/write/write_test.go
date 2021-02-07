@@ -2,13 +2,32 @@ package write
 
 import (
 	"bufio"
+	"context"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
+	"cloud.google.com/go/storage"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/api/option"
 )
+
+// TODO: Think about how it could be possible (or not)
+// to mock the Google Cloud Storage client.
+// After some research, it seems very difficult.
+
+// Setup tests to disable logger.
+func TestMain(m *testing.M) {
+	// Overriding global client with a testing one.
+	client, _ = storage.NewClient(context.Background(), option.WithoutAuthentication())
+
+	log.SetOutput(ioutil.Discard)
+	os.Exit(m.Run())
+}
 
 func TestCatHTTPContentKO(t *testing.T) {
 	r := httptest.NewRequest("POST", "/", strings.NewReader("This is only plain text."))
@@ -22,7 +41,7 @@ func TestCatHTTPContentKO(t *testing.T) {
 	respBody.Scan()
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	assert.Equal(t, "Something wrong happend and your cat could not be created 😿", respBody.Text())
+	assert.Equal(t, "Something wrong happened and your cat could not be created 😿", respBody.Text())
 }
 
 func TestCatHTTPContentOK(t *testing.T) {

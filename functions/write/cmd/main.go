@@ -11,7 +11,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", write.CatHTTP); err != nil {
+	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/api/write", write.CatHTTP); err != nil {
 		log.Fatalf("funcframework.RegisterHTTPFunctionContext: %v\n", err)
 	}
 	// Use PORT environment variable, or default to 8080.

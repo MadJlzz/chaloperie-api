@@ -45,7 +45,7 @@ func TestCatHTTPContentKO(t *testing.T) {
 }
 
 func TestCatHTTPContentOK(t *testing.T) {
-	r := httptest.NewRequest("POST", "/", strings.NewReader(`{"title": "Shadow does HAI", "pictureUrl": "https://google.com"}`))
+	r := httptest.NewRequest("POST", "/", strings.NewReader(`{"title": "Red Dot", "pictureURL": "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg=="}`))
 	r.Header.Add("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()

@@ -23,7 +23,7 @@ import (
 // Setup tests to disable logger.
 func TestMain(m *testing.M) {
 	// Overriding global client with a testing one.
-	client, _ = storage.NewClient(context.Background(), option.WithoutAuthentication())
+	storageCli, _ = storage.NewClient(context.Background(), option.WithoutAuthentication())
 
 	log.SetOutput(ioutil.Discard)
 	os.Exit(m.Run())

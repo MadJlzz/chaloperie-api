@@ -2,6 +2,7 @@ package write
 
 import (
 	"bytes"
+	"cloud.google.com/go/firestore"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -16,12 +17,24 @@ import (
 	"github.com/google/uuid"
 )
 
-var client *storage.Client
+const ProjectId = "madproject-271618"
+const BucketName = "madproject-chaloperie"
+const FirestoreRootCollection = "chaloperie"
+
+var storageCli *storage.Client
+var firestoreCli *firestore.Client
 
 type catCreateRequest struct {
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
 	PictureURL  string `json:"pictureURL"`
+}
+
+type catPersistent struct {
+	Title string
+	Description string
+	Datetime string
+	PictureURL string
 }
 
 func init() {
@@ -54,6 +67,13 @@ func CatHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = initClientFirestore(ctx)
+	if err != nil {
+		log.Printf(`{"severity": "error", "message": "could not initialize Google Cloud Firestore client", "logging.googleapis.com/trace": "%v"}`+"\n", err)
+		http.Error(w, "Google encounters problem so your cat could not be created 😿", http.StatusInternalServerError)
+		return
+	}
+
 	var cat catCreateRequest
 	if err = json.NewDecoder(r.Body).Decode(&cat); err != nil {
 		log.Printf(`{"severity": "error", "message": "could not decode request body as json", "logging.googleapis.com/trace": "%v"}`+"\n", err)
@@ -71,7 +91,7 @@ func CatHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Saving cat picture to Cloud Storage
-	ref, err := uploadCatPicture(ctx, "madproject-chaloperie", uuid.New().String(), cat.PictureURL)
+	ref, err := uploadCatPicture(ctx, BucketName, uuid.New().String(), cat.PictureURL)
 	if err != nil {
 		log.Printf(`{"severity": "error", "message": "saving to Google Cloud Storage failed", "logging.googleapis.com/trace": "%v"}`+"\n", err)
 		http.Error(w, "Something wrong happened and your cat could not be created 😿", http.StatusInternalServerError)
@@ -79,11 +99,22 @@ func CatHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Saving cat to Cloud Firestore
 	log.Printf("Saving cat [%s] to Cloud Firestore!\n", ref)
+	docRef := firestoreCli.Collection(FirestoreRootCollection).NewDoc()
+	_, err = docRef.Create(ctx, catPersistent{
+		Title: cat.Title,
+		Description: cat.Description,
+		Datetime: time.Now().Format(time.RFC3339),
+		PictureURL: ref,
+	})
+	if err != nil {
+		log.Printf(`{"severity": "error", "message": "saving to Google Cloud Firestore failed", "logging.googleapis.com/trace": "%v"}`+"\n", err)
+		http.Error(w, "Something wrong happened and your cat could not be created 😿", http.StatusInternalServerError)
+	}
 }
 
 func validateInputs(cat catCreateRequest) error {
 	if len(cat.Title) < 5 || len(cat.Title) > 30 {
-		return errors.New("Cat title should have a minimum length of 5 and is capped at 30 characters maximum 😼")
+		return errors.New("cat title should have a minimum length of 5 and is capped at 30 characters maximum 😼")
 	}
 	if len(cat.PictureURL) <= 0 {
 		return errors.New("A cat image should be provided 😼")
@@ -93,8 +124,16 @@ func validateInputs(cat catCreateRequest) error {
 
 func initClientStorage(ctx context.Context) error {
 	var err error
-	if client == nil {
-		client, err = storage.NewClient(ctx)
+	if storageCli == nil {
+		storageCli, err = storage.NewClient(ctx)
+	}
+	return err
+}
+
+func initClientFirestore(ctx context.Context) error {
+	var err error
+	if firestoreCli == nil {
+		firestoreCli, err = firestore.NewClient(ctx, ProjectId)
 	}
 	return err
 }
@@ -109,7 +148,7 @@ func uploadCatPicture(ctx context.Context, bucket, filename, data string) (strin
 	}
 	imgBuf := bytes.NewBuffer(imgBytes)
 
-	bucketObj := client.Bucket(bucket).Object(filename)
+	bucketObj := storageCli.Bucket(bucket).Object(filename)
 	wc := bucketObj.NewWriter(ctx)
 	if _, err := io.Copy(wc, imgBuf); err != nil {
 		return "", fmt.Errorf("error when copying image buffer to writer. got: %v", err)
@@ -119,5 +158,5 @@ func uploadCatPicture(ctx context.Context, bucket, filename, data string) (strin
 	}
 	log.Printf(`{"severity": "info", "message": "image [%s] has been uploaded"`, filename)
 
-	return fmt.Sprintf("gs://%s/%s", bucket, filename), nil
+	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, filename), nil
 }

@@ -10,7 +10,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", read.CatHTTP); err != nil {
+	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/api/read", read.CatHTTP); err != nil {
 		log.Fatalf("funcframework.RegisterHTTPFunctionContext: %v\n", err)
 	}
 	// Use PORT environment variable, or default to 8080.

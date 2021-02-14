@@ -10,7 +10,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", read.HelloHTTP); err != nil {
+	if err := funcframework.RegisterHTTPFunctionContext(ctx, "/", read.CatHTTP); err != nil {
 		log.Fatalf("funcframework.RegisterHTTPFunctionContext: %v\n", err)
 	}
 	// Use PORT environment variable, or default to 8080.
@@ -18,6 +18,7 @@ func main() {
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		port = envPort
 	}
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "../../credentials/chaloperie-writer.json")
 	if err := funcframework.Start(port); err != nil {
 		log.Fatalf("funcframework.Start: %v\n", err)
 	}
